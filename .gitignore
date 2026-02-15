@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+chat_history_*.json
+nginx/data/
+nginx/letsencrypt/
