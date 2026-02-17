@@ -4,13 +4,14 @@ import os
 import json
 from PIL import Image
 import io
-import fitz  # PyMuPDF für PDF-Verarbeitung
+import fitz
+import sqlite3
+import bcrypt
 
 # =========================================================
 # 1. Konfiguration
 # =========================================================
 
-# API-Key aus .env laden
 api_key = os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
@@ -19,13 +20,85 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Modell mit korrekt konfiguriertem Google Search Tool
 tutor_model = genai.GenerativeModel(
     model_name="gemini-2.0-flash",
 )
 
 # =========================================================
-# 2. Sokratischer System-Prompt
+# 2. AUTHENTIFIZIERUNG (NEU)
+# =========================================================
+
+def authenticate(username, password):
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT password_hash, role FROM users WHERE username = ?",
+        (username,)
+    )
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if result:
+        stored_hash, role = result
+        if bcrypt.checkpw(password.encode(), stored_hash.encode()):
+            return True, role
+
+    return False, None
+
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "role" not in st.session_state:
+    st.session_state.role = None
+
+# =========================================================
+# 3. UI HEADER
+# =========================================================
+
+st.set_page_config(page_title="Sokratischer KI-Tutor", page_icon="🧠")
+st.title("🧠 Sokratischer KI-Tutor")
+st.info("Ich gebe dir keine Lösungen – ich helfe dir beim Denken.")
+
+# =========================================================
+# 4. LOGIN-MASKE
+# =========================================================
+
+if not st.session_state.user:
+    st.subheader("Login")
+
+    username = st.text_input("Benutzername")
+    password = st.text_input("Passwort", type="password")
+
+    if st.button("Anmelden"):
+        success, role = authenticate(username, password)
+
+        if success:
+            st.session_state.user = username
+            st.session_state.role = role
+            st.success(f"Willkommen {username} ({role})")
+            st.rerun()
+        else:
+            st.error("Falsche Zugangsdaten")
+
+    st.stop()
+
+# =========================================================
+# 5. SIDEBAR (User + Rolle + Logout)
+# =========================================================
+
+st.sidebar.write(f"Angemeldet als: {st.session_state.user}")
+st.sidebar.write(f"Rolle: {st.session_state.role}")
+
+if st.sidebar.button("Abmelden"):
+    st.session_state.user = None
+    st.session_state.role = None
+    st.rerun()
+
+# =========================================================
+# 6. Sokratischer System-Prompt
 # =========================================================
 
 SYSTEM_PROMPT = """
@@ -46,42 +119,40 @@ Nicht Antworten liefern, sondern Denkfähigkeit fördern.
 """
 
 # =========================================================
-# 3. Persistenter Chat-Verlauf
+# 7. USER-SPEZIFISCHE HISTORY (NEU)
 # =========================================================
 
-HISTORY_FILE = "chat_history.json"
+def get_history_file():
+    return f"chat_history_{st.session_state.user}.json"
 
 def load_history():
-    if os.path.exists(HISTORY_FILE):
+    file = get_history_file()
+    if os.path.exists(file):
         try:
-            with open(HISTORY_FILE, "r") as f:
+            with open(file, "r") as f:
                 return json.load(f)
         except:
             return []
     return []
 
 def save_history(messages):
-    with open(HISTORY_FILE, "w") as f:
+    file = get_history_file()
+    with open(file, "w") as f:
         json.dump(messages, f, indent=4)
-
-# =========================================================
-# 4. Streamlit UI
-# =========================================================
-
-st.set_page_config(page_title="Sokratischer KI-Tutor", page_icon="🧠")
-st.title("🧠 Sokratischer KI-Tutor")
-st.info("Ich gebe dir keine Lösungen – ich helfe dir beim Denken.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = load_history()
 
-# Chat anzeigen
+# =========================================================
+# 8. CHAT ANZEIGEN
+# =========================================================
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # =========================================================
-# 5. Datei-Upload (Bild oder PDF)
+# 9. Datei-Upload (Bild oder PDF)
 # =========================================================
 
 uploaded_file = st.file_uploader(
@@ -94,7 +165,6 @@ uploaded_text = None
 
 if uploaded_file:
 
-    # --- PDF ---
     if uploaded_file.type == "application/pdf":
         try:
             pdf = fitz.open(stream=uploaded_file.read(), filetype="pdf")
@@ -115,7 +185,6 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Fehler beim Verarbeiten des PDFs: {e}")
 
-    # --- Bild ---
     else:
         try:
             image_bytes = uploaded_file.read()
@@ -125,12 +194,11 @@ if uploaded_file:
             st.error(f"Fehler beim Laden des Bildes: {e}")
 
 # =========================================================
-# 6. Chat-Interaktion
+# 10. CHAT-INTERAKTION
 # =========================================================
 
 if prompt := st.chat_input("Was möchtest du verstehen?"):
 
-    # User speichern
     st.session_state.messages.append(
         {"role": "user", "content": prompt}
     )
@@ -140,23 +208,14 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
 
     with st.chat_message("assistant"):
         try:
-            # =============================================
-            # Prompt-Konstruktion
-            # =============================================
-
             conversation = SYSTEM_PROMPT + "\n\n"
 
             for msg in st.session_state.messages:
                 conversation += f"{msg['role'].upper()}: {msg['content']}\n"
 
-            # PDF-Text anhängen (falls vorhanden)
             if uploaded_text:
                 conversation += "\n\nAUFGABENBLATT:\n"
                 conversation += uploaded_text + "\n"
-
-            # =============================================
-            # Anfrage an Gemini
-            # =============================================
 
             if uploaded_image:
                 response = tutor_model.generate_content(
@@ -169,7 +228,6 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
 
             st.markdown(full_response)
 
-            # Speichern
             st.session_state.messages.append(
                 {"role": "assistant", "content": full_response}
             )
@@ -180,11 +238,10 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
             st.error(f"Fehler bei der Generierung: {e}")
 
 # =========================================================
-# 7. Reset-Funktion
+# 11. RESET
 # =========================================================
 
 if st.button("🔄 Neues Thema beginnen"):
     st.session_state.messages = []
     save_history([])
     st.rerun()
-
