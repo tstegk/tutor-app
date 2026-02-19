@@ -20,9 +20,11 @@
 - Dedicated sudo user (tobias)
 - User added to docker group
 
-### HTTPS
+### HTTPS / Reverse Proxy
 - Nginx Proxy Manager
 - Let's Encrypt SSL certificates
+- No external Basic Authentication
+- Authentication handled exclusively at application layer
 
 ---
 
