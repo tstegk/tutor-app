@@ -26,6 +26,11 @@
 - No external Basic Authentication
 - Authentication handled exclusively at application layer
 
+### Firewall
+- UFW enabled
+- Default deny incoming
+- Allowed ports: 22, 80, 443
+
 ---
 
 ## 3. Container Architecture
@@ -38,6 +43,8 @@ Docker Compose services:
 Ports:
 - 80 / 443 → Nginx
 - 8501 → internal Streamlit
+
+- Log rotation enabled (max-size 10m, max-file 3)
 
 ---
 
