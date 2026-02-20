@@ -1,0 +1,5 @@
+nginx/
+chat_history_*
+users.db
+.env
+
