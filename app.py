@@ -1,5 +1,4 @@
 import streamlit as st
-import google.generativeai as genai
 import os
 import json
 from PIL import Image
@@ -8,24 +7,11 @@ import fitz
 import sqlite3
 import bcrypt
 
-# =========================================================
-# 1. Konfiguration
-# =========================================================
+from llm_service import generate_response
 
-api_key = os.environ.get("GEMINI_API_KEY")
-
-if not api_key:
-    st.error("Kein GEMINI_API_KEY gefunden. Bitte .env prüfen.")
-    st.stop()
-
-genai.configure(api_key=api_key)
-
-tutor_model = genai.GenerativeModel(
-    model_name="gemini-2.0-flash",
-)
 
 # =========================================================
-# 2. AUTHENTIFIZIERUNG (NEU)
+# 1. AUTHENTIFIZIERUNG
 # =========================================================
 
 def authenticate(username, password):
@@ -54,16 +40,18 @@ if "user" not in st.session_state:
 if "role" not in st.session_state:
     st.session_state.role = None
 
+
 # =========================================================
-# 3. UI HEADER
+# 2. UI HEADER
 # =========================================================
 
 st.set_page_config(page_title="Sokratischer KI-Tutor", page_icon="🧠")
 st.title("🧠 Sokratischer KI-Tutor")
 st.info("Ich gebe dir keine Lösungen – ich helfe dir beim Denken.")
 
+
 # =========================================================
-# 4. LOGIN-MASKE
+# 3. LOGIN
 # =========================================================
 
 if not st.session_state.user:
@@ -85,8 +73,9 @@ if not st.session_state.user:
 
     st.stop()
 
+
 # =========================================================
-# 5. SIDEBAR (User + Rolle + Logout)
+# 4. SIDEBAR
 # =========================================================
 
 st.sidebar.write(f"Angemeldet als: {st.session_state.user}")
@@ -97,8 +86,9 @@ if st.sidebar.button("Abmelden"):
     st.session_state.role = None
     st.rerun()
 
+
 # =========================================================
-# 6. Sokratischer System-Prompt
+# 5. SYSTEM PROMPT
 # =========================================================
 
 SYSTEM_PROMPT = """
@@ -113,13 +103,17 @@ Regeln:
   -> Gib Hinweise, aber keine vollständige Lösung.
 - Verwende einfache Sprache.
 - Lobe Denkansätze und korrigiere sanft.
+- Wenn du Informationen aus dem Internet nutzt:
+  -> Verwende nur seriöse Quellen.
+  -> Gib die Quelle am Ende kurz an.
 
 Ziel:
 Nicht Antworten liefern, sondern Denkfähigkeit fördern.
 """
 
+
 # =========================================================
-# 7. USER-SPEZIFISCHE HISTORY (NEU)
+# 6. USER-SPEZIFISCHE HISTORY
 # =========================================================
 
 def get_history_file():
@@ -143,16 +137,18 @@ def save_history(messages):
 if "messages" not in st.session_state:
     st.session_state.messages = load_history()
 
+
 # =========================================================
-# 8. CHAT ANZEIGEN
+# 7. CHAT ANZEIGEN
 # =========================================================
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
+
 # =========================================================
-# 9. Datei-Upload (Bild oder PDF)
+# 8. DATEI-UPLOAD
 # =========================================================
 
 uploaded_file = st.file_uploader(
@@ -193,8 +189,9 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Fehler beim Laden des Bildes: {e}")
 
+
 # =========================================================
-# 10. CHAT-INTERAKTION
+# 9. CHAT INTERAKTION
 # =========================================================
 
 if prompt := st.chat_input("Was möchtest du verstehen?"):
@@ -207,24 +204,46 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
+
         try:
-            conversation = SYSTEM_PROMPT + "\n\n"
+            # Nachrichtenstruktur für OpenAI
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+            ]
 
             for msg in st.session_state.messages:
-                conversation += f"{msg['role'].upper()}: {msg['content']}\n"
+                messages.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
 
             if uploaded_text:
-                conversation += "\n\nAUFGABENBLATT:\n"
-                conversation += uploaded_text + "\n"
+                messages.append({
+                    "role": "user",
+                    "content": f"AUFGABENBLATT:\n{uploaded_text}"
+                })
 
             if uploaded_image:
-                response = tutor_model.generate_content(
-                    [conversation, uploaded_image]
-                )
-            else:
-                response = tutor_model.generate_content(conversation)
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Bitte analysiere dieses Bild:"},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": uploaded_image
+                            }
+                        }
+                    ]
+                })
 
-            full_response = response.text
+            llm_result = generate_response(
+                messages,
+                enable_web_search=True,
+                max_tokens=800
+            )
+
+            full_response = llm_result["text"]
 
             st.markdown(full_response)
 
@@ -237,8 +256,9 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
         except Exception as e:
             st.error(f"Fehler bei der Generierung: {e}")
 
+
 # =========================================================
-# 11. RESET
+# 10. RESET
 # =========================================================
 
 if st.button("🔄 Neues Thema beginnen"):
