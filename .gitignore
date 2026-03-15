@@ -4,3 +4,5 @@ __pycache__/
 chat_history_*.json
 nginx/data/
 nginx/letsencrypt/
+reset_password.py
+create_user.py
