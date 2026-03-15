@@ -87,6 +87,40 @@ if st.sidebar.button("Abmelden"):
     st.session_state.role = None
     st.rerun()
 
+# ADMIN KOSTENÜBERSICHT
+
+if st.session_state.role == "admin":
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Systemkosten")
+
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+
+    # Gesamtkosten
+    cursor.execute("SELECT SUM(cost_estimate) FROM usage")
+    total_cost = cursor.fetchone()[0]
+
+    if total_cost:
+        st.sidebar.write(f"Gesamtkosten: ${total_cost:.2f}")
+    else:
+        st.sidebar.write("Noch keine Kosten")
+
+    st.sidebar.markdown("#### Kosten pro Nutzer")
+
+    cursor.execute("""
+    SELECT username, SUM(cost_estimate)
+    FROM usage
+    GROUP BY username
+    """)
+
+    rows = cursor.fetchall()
+
+    for user, cost in rows:
+        st.sidebar.write(f"{user}: ${cost:.2f}")
+
+    conn.close()
+
 
 # =========================================================
 # 5. SYSTEM PROMPT
