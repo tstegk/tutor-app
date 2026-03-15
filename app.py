@@ -8,6 +8,7 @@ import sqlite3
 import bcrypt
 
 from llm_service import generate_response
+from usage_logger import log_usage
 
 
 # =========================================================
@@ -244,8 +245,20 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
             )
 
             full_response = llm_result["text"]
+            usage = llm_result["usage"]
+
+            # Gebühren-Logging
+            cost = log_usage(
+                st.session_state.user,
+                usage["prompt_tokens"],
+                usage["completion_tokens"],
+                usage["total_tokens"]
+            )
 
             st.markdown(full_response)
+
+            # Optional: Kosten unter prompt anzeigen anzeigen
+            # st.caption(f"Geschätzte API-Kosten dieser Antwort: ${cost:.4f}")
 
             st.session_state.messages.append(
                 {"role": "assistant", "content": full_response}
