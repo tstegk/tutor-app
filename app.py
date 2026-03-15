@@ -112,7 +112,7 @@ Ziel:
 Nicht Antworten liefern, sondern Denkfähigkeit fördern.
 """
 
-
+MAX_HISTORY = 10
 # =========================================================
 # 6. USER-SPEZIFISCHE HISTORY
 # =========================================================
@@ -212,7 +212,9 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
                 {"role": "system", "content": SYSTEM_PROMPT},
             ]
 
-            for msg in st.session_state.messages:
+            recent_messages = st.session_state.messages[-MAX_HISTORY:]
+
+            for msg in recent_messages:
                 messages.append({
                     "role": msg["role"],
                     "content": msg["content"]
