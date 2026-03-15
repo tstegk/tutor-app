@@ -67,6 +67,50 @@ Build Isolation:
 
 ## 4. Application Architecture
 
+### System Diagram
+Internet
+       │
+       ▼
+┌─────────────────────────┐
+│ Nginx Proxy Manager │
+│ Reverse Proxy + SSL │
+│ Ports: 80 / 443 │
+└─────────────┬───────────┘
+│
+▼
+┌─────────────────────────┐
+│ tutor-app container │
+│ Streamlit Application │
+│ Port: 8501 (internal) │
+└─────────────┬───────────┘
+│
+▼
+┌─────────────────────────┐
+│ Application Layer │
+│ app.py │
+│ UI + Authentication │
+└─────────────┬───────────┘
+│
+▼
+┌─────────────────────────┐
+│ LLM Service Layer │
+│ llm_service.py │
+│ OpenAI API Integration │
+└─────────────┬───────────┘
+│
+▼
+┌─────────────────────────┐
+│ OpenAI API │
+│ GPT-4.1 + Web Search │
+└─────────────┬───────────┘
+│
+▼
+┌─────────────────────────┐
+│ SQLite Database │
+│ users.db │
+│ users + usage tables │
+└─────────────────────────┘
+
 ### Backend Stack
 - Streamlit
 - OpenAI API (gpt-4.1)
@@ -129,22 +173,129 @@ Formatted output + usage metadata
 
 ---
 
-## 8. Cost & Usage Management (Planned)
+## 8. Cost & Usage Management
 
-- Token usage returned per request
-- Usage logging to be implemented
-- Estimated cost calculation per request
-- Monthly usage monitoring planned
+### Token Usage Logging
+
+Each LLM request logs:
+
+- username
+- prompt_tokens
+- completion_tokens
+- total_tokens
+- estimated_cost
+- timestamp
+
+Storage:
+
+SQLite table `usage`.
+
+### Cost Calculation
+
+Approximate pricing model (gpt-4.1):
+
+- Prompt tokens: $0.03 / 1K tokens
+- Completion tokens: $0.06 / 1K tokens
+
+Cost estimate calculated per request.
+
+### Admin Cost Monitoring
+
+Admin users can view:
+
+- total system cost
+- cost per user
+
+Displayed in Streamlit sidebar.
+
+### Planned Enhancements
+
+- monthly cost aggregation
+- budget limits
+- cost alerts
 
 ---
 
-## 9. Change Log (High-Level)
+## 9. Conversation Context Management
+
+To control token usage, conversation history sent to the model is limited.
+
+MAX_HISTORY = 10
+
+Only the most recent messages are included in the prompt.
+
+Older messages remain stored locally but are not sent to the LLM.
+
+Benefits:
+
+- significantly reduced token usage
+- improved latency
+- stable context size
+
+---
+
+## 10. Repository Hygiene
+
+Operational scripts are excluded from version control.
+
+Examples:
+
+- `create_user.py`
+- `reset_password.py`
+
+These scripts are ignored via `.gitignore`.
+
+Sensitive runtime files excluded from repository:
+
+- `.env`
+- `users.db`
+- chat histories
+- nginx runtime data
+
+---
+
+## 11. Monitoring & Debugging
+
+System monitoring currently possible via:
+
+- SQLite queries
+- Admin UI cost dashboard
+- Docker logs
+
+Example queries:
+
+Total cost:
+SELECT SUM(cost_estimate) FROM usage;
+
+Cost per user:
+SELECT username, SUM(cost_estimate)
+FROM usage
+GROUP BY username;
+
+## 12. Change Log (High-Level)
+
+Initial system setup:
+
+- Dockerized Streamlit application
+- Reverse proxy with Nginx Proxy Manager
+- SSL via Let's Encrypt
+
+Security hardening:
+
+- SSH key authentication
+- UFW firewall
+- Fail2Ban intrusion protection
+
+AI backend evolution:
 
 - Removed Gemini SDK
-- Switched to OpenAI (gpt-4.1)
+- Migrated to OpenAI GPT-4.1
 - Introduced LLM abstraction layer
-- Enabled Web Search tool
-- Implemented firewall (UFW)
-- Installed Fail2Ban
-- Enabled Docker log rotation
-- Removed Nginx Basic Auth
+
+Operational improvements:
+
+- Token usage logging implemented
+- Cost calculation integrated
+- Admin cost dashboard added
+- Chat history token optimization implemented
+- Repository hygiene improvements
