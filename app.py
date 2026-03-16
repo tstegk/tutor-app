@@ -6,7 +6,8 @@ import io
 import fitz
 import sqlite3
 import bcrypt
-
+from datetime import datetime
+import glob
 from llm_service import generate_response
 from usage_logger import log_usage
 
@@ -86,6 +87,110 @@ if st.sidebar.button("Abmelden"):
     st.session_state.user = None
     st.session_state.role = None
     st.rerun()
+
+# ELTERN-DASHBOARD
+
+if st.session_state.role == "parent":
+
+    st.markdown("## Parent Dashboard")
+
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+
+    # -----------------------------------------------------
+    # Aktivität heute
+    # -----------------------------------------------------
+
+    st.markdown("### Aktivität heute")
+
+    cursor.execute("""
+    SELECT username, COUNT(*)
+    FROM usage
+    WHERE DATE(timestamp) = DATE('now')
+    GROUP BY username
+    """)
+
+    rows = cursor.fetchall()
+
+    if rows:
+        for user, count in rows:
+            st.write(f"{user}: {count} Fragen")
+    else:
+        st.write("Heute noch keine Aktivität.")
+
+    # -----------------------------------------------------
+    # Kostenübersicht
+    # -----------------------------------------------------
+
+    st.markdown("### Gesamtkosten")
+
+    cursor.execute("SELECT SUM(cost_estimate) FROM usage")
+    total_cost = cursor.fetchone()[0] or 0
+
+    st.write(f"Gesamt: ${total_cost:.2f}")
+
+    # -----------------------------------------------------
+    # Kosten pro Kind
+    # -----------------------------------------------------
+
+    st.markdown("### Kosten pro Kind")
+
+    cursor.execute("""
+    SELECT username, SUM(cost_estimate)
+    FROM usage
+    GROUP BY username
+    """)
+
+    rows = cursor.fetchall()
+
+    for user, cost in rows:
+        st.write(f"{user}: ${cost:.2f}")
+
+    conn.close()
+
+    # -----------------------------------------------------
+    # Letzte Fragen
+    # -----------------------------------------------------
+
+    st.markdown("### Letzte Fragen der Kinder")
+
+    history_files = glob.glob("chat_history_*.json")
+
+    for file in history_files:
+
+        username = file.replace("chat_history_", "").replace(".json", "")
+
+        try:
+            with open(file, "r") as f:
+                messages = json.load(f)
+
+            questions = [
+                m["content"] for m in messages
+                if m["role"] == "user"
+            ][-5:]
+
+            if questions:
+                st.markdown(f"**{username}**")
+
+            for q in questions:
+
+                text = q.get("content", "")
+                ts = q.get("timestamp")
+
+                if ts:
+                    try:
+                        time_str = datetime.fromisoformat(ts).strftime("%H:%M")
+                    except:
+                        time_str = "?"
+                else:
+                    time_str = "?"
+
+                st.write(f"{time_str} — {text}")
+
+        except:
+            pass
+
+    st.stop()
 
 # ADMIN KOSTENÜBERSICHT
 
@@ -251,7 +356,11 @@ if uploaded_file:
 if prompt := st.chat_input("Was möchtest du verstehen?"):
 
     st.session_state.messages.append(
-        {"role": "user", "content": prompt}
+        {
+            "role": "user",
+            "content": prompt,
+            "timestamp": datetime.now().isoformat()
+            }
     )
 
     with st.chat_message("user"):
