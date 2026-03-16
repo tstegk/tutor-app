@@ -148,6 +148,15 @@ Formatted output + usage metadata
 - Passwords stored as bcrypt hashes
 - Session state handled via Streamlit
 
+Parent users access a monitoring dashboard instead of the tutor chat interface.
+
+The dashboard provides:
+
+- daily activity per child
+- total system cost
+- cost per child
+- recent questions (with timestamps)
+
 ---
 
 ## 6. Data Persistence
@@ -157,6 +166,16 @@ Formatted output + usage metadata
 - Docker log rotation enabled:
   - max-size: 10m
   - max-file: 3
+
+Each message entry may include a timestamp field:
+
+{
+ "role": "user",
+ "content": "...",
+ "timestamp": "ISO8601 datetime"
+}
+
+This timestamp is used for activity monitoring in the parent dashboard.
 
 ---
 
@@ -299,3 +318,8 @@ Operational improvements:
 - Admin cost dashboard added
 - Chat history token optimization implemented
 - Repository hygiene improvements
+
+Parent monitoring dashboard implemented:
+- daily activity tracking
+- recent questions view
+- timestamp support in chat history
