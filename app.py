@@ -410,12 +410,13 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
                     ]
                 })
 
-            llm_result = generate_response(
-                messages,
-                system_prompt=SYSTEM_PROMPT,
-                enable_web_search=True,
-                max_tokens=800
-            )
+            with st.spinner("Denke nach..."):
+                llm_result = generate_response(
+                    messages,
+                    system_prompt=SYSTEM_PROMPT,
+                    enable_web_search=True,
+                    max_tokens=2048
+                )
 
             full_response = llm_result["text"]
             usage = llm_result["usage"]

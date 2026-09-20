@@ -18,7 +18,7 @@ client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 # LLM Service
 # =========================================================
 
-def generate_response(messages, system_prompt, enable_web_search=True, max_tokens=800):
+def generate_response(messages, system_prompt, enable_web_search=True, max_tokens=2048):
     """
     Zentrale LLM-Funktion.
 
