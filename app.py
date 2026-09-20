@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import json
+import base64
 from PIL import Image
 import io
 import fitz
@@ -315,7 +316,8 @@ uploaded_file = st.file_uploader(
     type=["png", "jpg", "jpeg", "pdf"]
 )
 
-uploaded_image = None
+uploaded_image_bytes = None
+uploaded_image_mime = None
 uploaded_text = None
 
 if uploaded_file:
@@ -343,8 +345,12 @@ if uploaded_file:
     else:
         try:
             image_bytes = uploaded_file.read()
-            uploaded_image = Image.open(io.BytesIO(image_bytes))
-            st.image(uploaded_image, caption="Hochgeladene Aufgabe")
+            # Für die Vorschau reicht ein PIL-Image; für die Claude-API brauchen
+            # wir zusätzlich die rohen Bytes + den Mime-Type als Base64-Block.
+            preview_image = Image.open(io.BytesIO(image_bytes))
+            st.image(preview_image, caption="Hochgeladene Aufgabe")
+            uploaded_image_bytes = image_bytes
+            uploaded_image_mime = uploaded_file.type
         except Exception as e:
             st.error(f"Fehler beim Laden des Bildes: {e}")
 
@@ -369,10 +375,9 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
     with st.chat_message("assistant"):
 
         try:
-            # Nachrichtenstruktur für OpenAI
-            messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-            ]
+            # Nachrichtenstruktur für die Claude-API (System-Prompt wird separat
+            # übergeben, siehe generate_response – kein "system"-Eintrag hier)
+            messages = []
 
             recent_messages = st.session_state.messages[-MAX_HISTORY:]
 
@@ -388,15 +393,18 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
                     "content": f"AUFGABENBLATT:\n{uploaded_text}"
                 })
 
-            if uploaded_image:
+            if uploaded_image_bytes:
+                image_b64 = base64.standard_b64encode(uploaded_image_bytes).decode("utf-8")
                 messages.append({
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "Bitte analysiere dieses Bild:"},
                         {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": uploaded_image
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": uploaded_image_mime,
+                                "data": image_b64
                             }
                         }
                     ]
@@ -404,6 +412,7 @@ if prompt := st.chat_input("Was möchtest du verstehen?"):
 
             llm_result = generate_response(
                 messages,
+                system_prompt=SYSTEM_PROMPT,
                 enable_web_search=True,
                 max_tokens=800
             )

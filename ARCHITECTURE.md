@@ -95,13 +95,13 @@ Internet
 ┌─────────────────────────┐
 │ LLM Service Layer │
 │ llm_service.py │
-│ OpenAI API Integration │
+│ Anthropic API Integration│
 └─────────────┬───────────┘
 │
 ▼
 ┌─────────────────────────┐
-│ OpenAI API │
-│ GPT-4.1 + Web Search │
+│ Anthropic Claude API │
+│ Claude Sonnet 5 + Web Search│
 └─────────────┬───────────┘
 │
 ▼
@@ -113,7 +113,7 @@ Internet
 
 ### Backend Stack
 - Streamlit
-- OpenAI API (gpt-4.1)
+- Anthropic Claude API (claude-sonnet-5)
 - SQLite (users.db)
 - bcrypt password hashing
 - PyMuPDF for PDF parsing
@@ -122,8 +122,8 @@ Internet
 - `llm_service.py`
 - Provider decoupled from UI
 - Model configurable via ENV:
-  - OPENAI_MODEL
-- Web search tool enabled
+  - ANTHROPIC_MODEL
+- Web search server tool enabled (`web_search_20260209`)
 - Max token limit configured (default 800)
 
 Architecture pattern:
@@ -132,9 +132,15 @@ UI (app.py)
     ↓
 LLM Service (llm_service.py)
     ↓
-OpenAI Responses API
+Anthropic Messages API
     ↓
 Formatted output + usage metadata
+
+> **Providerwechsel (2026):** Ursprünglich lief die App über die OpenAI Responses API
+> (gpt-4.1). Im Zuge einer Sicherheitsbereinigung (siehe `TECH_ASSESSMENT.md`, Phase 1)
+> wurde auf die Anthropic Claude API umgestellt – u.a. weil dabei zwei bestehende Bugs
+> (nicht funktionierender Bild-Upload, an das Modell entkoppelte Kostenschätzung) im
+> selben Zug behoben werden konnten.
 
 ---
 
@@ -211,12 +217,16 @@ SQLite table `usage`.
 
 ### Cost Calculation
 
-Approximate pricing model (gpt-4.1):
+Pricing model, keyed by the configured `ANTHROPIC_MODEL` (see `usage_logger.py`):
 
-- Prompt tokens: $0.03 / 1K tokens
-- Completion tokens: $0.06 / 1K tokens
+- claude-sonnet-5 (current default): $2.00 / 1M input tokens, $10.00 / 1M output tokens
+- claude-opus-5: $5.00 / 1M input tokens, $25.00 / 1M output tokens
+- claude-haiku-4-5: $1.00 / 1M input tokens, $5.00 / 1M output tokens
 
-Cost estimate calculated per request.
+Cost estimate calculated per request. Unlike the previous OpenAI-only implementation,
+this is no longer hardcoded to a single model — an unrecognized `ANTHROPIC_MODEL`
+falls back to Sonnet-5 pricing with a console warning instead of silently using the
+wrong numbers.
 
 ### Admin Cost Monitoring
 
@@ -323,3 +333,10 @@ Parent monitoring dashboard implemented:
 - daily activity tracking
 - recent questions view
 - timestamp support in chat history
+
+LLM provider migration (2026):
+- Migrated from OpenAI (gpt-4.1) to Anthropic Claude (claude-sonnet-5)
+- Fixed image upload (proper base64 encoding instead of a raw PIL object)
+- Cost table decoupled from a single hardcoded model, keyed by `ANTHROPIC_MODEL`
+- Old OpenAI API key revoked after migration was verified (text, web search, and
+  image analysis tested against the live Claude API before cutover)

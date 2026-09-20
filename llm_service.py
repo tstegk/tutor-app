@@ -1,29 +1,31 @@
 import os
-from openai import OpenAI
+import anthropic
 
 # =========================================================
 # Konfiguration
 # =========================================================
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4.1")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+MODEL_NAME = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY not set")
+if not ANTHROPIC_API_KEY:
+    raise ValueError("ANTHROPIC_API_KEY not set")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
 # =========================================================
 # LLM Service
 # =========================================================
 
-def generate_response(messages, enable_web_search=True, max_tokens=800):
+def generate_response(messages, system_prompt, enable_web_search=True, max_tokens=800):
     """
     Zentrale LLM-Funktion.
-    
+
     Parameters:
-        messages: List[dict]  (Chat-Format)
+        messages: List[dict]  (Chat-Format, role "user"/"assistant" – kein "system" hier,
+                   die Anthropic-API erwartet den System-Prompt separat)
+        system_prompt: str
         enable_web_search: bool
         max_tokens: int
 
@@ -39,32 +41,33 @@ def generate_response(messages, enable_web_search=True, max_tokens=800):
             }
     """
 
-    tools = []
-    if enable_web_search:
-        tools.append({"type": "web_search"})
+    kwargs = {
+        "model": MODEL_NAME,
+        "max_tokens": max_tokens,
+        "system": system_prompt,
+        "messages": messages,
+    }
 
-    response = client.responses.create(
-        model=MODEL_NAME,
-        input=messages,
-        tools=tools if tools else None,
-        max_output_tokens=max_tokens
-    )
+    if enable_web_search:
+        kwargs["tools"] = [{"type": "web_search_20260209", "name": "web_search"}]
+
+    response = client.messages.create(**kwargs)
 
     # Text extrahieren
     output_text = ""
-    for item in response.output:
-        if item.type == "message":
-            for content in item.content:
-                if content.type == "output_text":
-                    output_text += content.text
+    for block in response.content:
+        if block.type == "text":
+            output_text += block.text
 
     usage = response.usage
+    prompt_tokens = usage.input_tokens if usage else 0
+    completion_tokens = usage.output_tokens if usage else 0
 
     return {
         "text": output_text,
         "usage": {
-            "prompt_tokens": usage.input_tokens if usage else 0,
-            "completion_tokens": usage.output_tokens if usage else 0,
-            "total_tokens": usage.total_tokens if usage else 0
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens
         }
     }

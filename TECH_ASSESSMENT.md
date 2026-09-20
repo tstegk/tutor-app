@@ -104,15 +104,15 @@ Ziel: Sicherheitsrisiken schließen, die unabhängig von der Nutzerzahl gelten.
 
 ### Phase 1 — Provider-Wechsel: OpenAI → Claude API
 Ziel: Umstieg auf Claude, dabei zwei bestehende Bugs (Bild-Upload, entkoppelte Kostenschätzung) im selben Zug lösen.
-6. Anthropic-API-Key beschaffen, als `ANTHROPIC_API_KEY` in `.env` hinterlegen; `.env.example` mit benötigten Variablen anlegen.
-7. `llm_service.py` auf die Anthropic-Messages-API umstellen (`client.messages.create`), inkl. korrekter Anbindung von `usage.input_tokens`/`output_tokens`.
-8. Bild-Upload korrekt implementieren (Base64-codierte Image-Content-Blocks) – behebt A2.12 im Zuge der Migration.
-9. Web-Suche-Feature klären: äquivalentes Server-Tool bei Claude einbinden oder bewusst weglassen.
-10. `usage_logger.py`: Preistabelle auf aktuelle Claude-Preise umstellen, an die konfigurierte Modell-Env-Var koppeln – behebt A2.15.
-11. `requirements.txt`: `openai` durch `anthropic` ersetzen, mit gepinnter Version.
-12. System-Prompt (`app.py:234-271`) gegen Claude testen, bei Bedarf anpassen.
-13. `ARCHITECTURE.md`/README (Phase 3) entsprechend aktualisieren.
-14. **Nach verifiziertem Umstieg: alten OpenAI-Key/-Account widerrufen.** Vollzug von Phase-0-Punkt 1 (dort nur die `.env`-Rechte) – bewusst hierher verschoben, damit der Tutor-Chat zwischen Widerruf und Migration nicht ausfällt.
+6. ✅ Anthropic-API-Key beschafft, als `ANTHROPIC_API_KEY` (dediziert für dieses Projekt, Standard-Arbeitsbereich-Scope, 1 Jahr Ablauf) in `.env` hinterlegt.
+7. ✅ `llm_service.py` auf die Anthropic-Messages-API umgestellt (`client.messages.create`), System-Prompt separat übergeben, `usage.input_tokens`/`output_tokens` korrekt angebunden.
+8. ✅ Bild-Upload korrekt implementiert (Base64-codierte Image-Content-Blocks) – behebt A2.12. Verifiziert: Testbild korrekt als "rot" erkannt.
+9. ✅ Web-Suche-Feature auf `web_search_20260209` umgestellt. Verifiziert: Faktenfrage mit aktueller, korrekter Antwort beantwortet.
+10. ✅ `usage_logger.py`: Preistabelle auf aktuelle Claude-Preise (Sonnet 5: $2/$10 pro 1M Token) umgestellt, an `ANTHROPIC_MODEL` gekoppelt statt hartcodiert – behebt A2.15.
+11. ✅ `requirements.txt`: `openai` durch `anthropic>=0.40.0` ersetzt. Docker-Build erfolgreich.
+12. ✅ System-Prompt gegen Claude getestet: Mehrturn-Dialog (Matheaufgabe + explizite Lösungsanfrage + eingebettete Faktenfrage) bestätigt korrektes sokratisches Verhalten und korrekte Unterscheidung Lernaufgabe/Faktenfrage.
+13. ✅ `ARCHITECTURE.md` aktualisiert (Provider, Modellname, Preistabelle, Change Log). README folgt in Phase 3.
+14. **Nach verifiziertem Umstieg: alten OpenAI-Key/-Account widerrufen.** Vollzug von Phase-0-Punkt 1 (dort nur die `.env`-Rechte) – bewusst hierher verschoben, damit der Tutor-Chat zwischen Widerruf und Migration nicht ausfällt. ⏳ Widerruf in der OpenAI-Console liegt beim Nutzer (kein Zugriff durch Claude Code); anschließend `OPENAI_*`-Zeilen aus `.env` entfernen.
 
 ### Phase 2 — Stabilisierung (übrige bestehende Bugs)
 15. „Letzte Fragen"-Bug im Eltern-Dashboard beheben (`app.py:167-191`).
