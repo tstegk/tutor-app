@@ -112,7 +112,7 @@ Ziel: Umstieg auf Claude, dabei zwei bestehende Bugs (Bild-Upload, entkoppelte K
 11. ✅ `requirements.txt`: `openai` durch `anthropic>=0.40.0` ersetzt. Docker-Build erfolgreich.
 12. ✅ System-Prompt gegen Claude getestet: Mehrturn-Dialog (Matheaufgabe + explizite Lösungsanfrage + eingebettete Faktenfrage) bestätigt korrektes sokratisches Verhalten und korrekte Unterscheidung Lernaufgabe/Faktenfrage.
 13. ✅ `ARCHITECTURE.md` aktualisiert (Provider, Modellname, Preistabelle, Change Log). README folgt in Phase 3.
-14. **Nach verifiziertem Umstieg: alten OpenAI-Key/-Account widerrufen.** Vollzug von Phase-0-Punkt 1 (dort nur die `.env`-Rechte) – bewusst hierher verschoben, damit der Tutor-Chat zwischen Widerruf und Migration nicht ausfällt. ⏳ Widerruf in der OpenAI-Console liegt beim Nutzer (kein Zugriff durch Claude Code); anschließend `OPENAI_*`-Zeilen aus `.env` entfernen.
+14. ✅ Alter OpenAI-Key vom Nutzer in der OpenAI-Console widerrufen; `OPENAI_API_KEY`/`OPENAI_MODEL`-Zeilen aus `.env` entfernt. App danach erneut gegen die Claude-API getestet – funktioniert unverändert. **Phase 1 damit vollständig abgeschlossen.**
 
 ### Phase 2 — Stabilisierung (übrige bestehende Bugs)
 15. „Letzte Fragen"-Bug im Eltern-Dashboard beheben (`app.py:167-191`).
