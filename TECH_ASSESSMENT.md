@@ -94,9 +94,9 @@ Punkte 1–3 sind reine Zugangsdaten-/Hygiene-Themen und gelten unabhängig davo
 
 ### Phase 0 — Sofortmaßnahmen (Sicherheit)
 Ziel: Sicherheitsrisiken schließen, die unabhängig von der Nutzerzahl gelten.
-1. OpenAI-API-Key sofort widerrufen/löschen (unabhängig vom geplanten Provider-Wechsel) und `.env`-Dateiberechtigungen auf `600` setzen.
+1. `.env`-Dateiberechtigungen auf `600` setzen (schützt den aktuell noch aktiven OpenAI-Key vor anderen lokalen Nutzern/Prozessen). **Der Widerruf des OpenAI-Keys selbst erfolgt bewusst erst in Phase 1, Schritt 14** – nachdem die Claude-Migration steht und verifiziert läuft, damit der Tutor-Chat zwischen Widerruf und fertiger Migration nicht ausfällt.
 2. Alle Passwörter zurücksetzen (insbesondere die `"-"`-Platzhalter und das `reset_password.py`-Klartextpasswort).
-3. `reset_password.py` und `create_user.py` von hartcodierten Klartext-Credentials befreien.
+3. ✅ Erledigt: `reset_password.py` und `create_user.py` von hartcodierten Klartext-Credentials befreien (fragen Benutzername/Passwort/Rolle jetzt interaktiv ab, Passwort via `getpass`).
 4. `users.db` und `chat_history.json` aus der Git-Historie entfernen (`git filter-repo` o. ä.) und sauber in `.gitignore` halten.
 5. Docker/UFW-Portfreigabe für 8501/81 prüfen und ggf. auf `127.0.0.1`-Bindung umstellen.
 
@@ -112,7 +112,7 @@ Ziel: Umstieg auf Claude, dabei zwei bestehende Bugs (Bild-Upload, entkoppelte K
 11. `requirements.txt`: `openai` durch `anthropic` ersetzen, mit gepinnter Version.
 12. System-Prompt (`app.py:234-271`) gegen Claude testen, bei Bedarf anpassen.
 13. `ARCHITECTURE.md`/README (Phase 3) entsprechend aktualisieren.
-14. Nach verifiziertem Umstieg: alten OpenAI-Key/-Account final deaktivieren.
+14. **Nach verifiziertem Umstieg: alten OpenAI-Key/-Account widerrufen.** Vollzug von Phase-0-Punkt 1 (dort nur die `.env`-Rechte) – bewusst hierher verschoben, damit der Tutor-Chat zwischen Widerruf und Migration nicht ausfällt.
 
 ### Phase 2 — Stabilisierung (übrige bestehende Bugs)
 15. „Letzte Fragen"-Bug im Eltern-Dashboard beheben (`app.py:167-191`).
@@ -141,4 +141,4 @@ Enthält bewusst nur Punkte mit niedriger Priorität im Familienkontext.
 31. Budget-Deckel pro Nutzer/Tag.
 
 ### Reihenfolge-Logik
-Phase 0 zuerst, weil hier echte Sicherheitsrisiken vorliegen, die unabhängig von der Nutzerzahl gelten. Phase 1 (Claude-Migration) folgt direkt danach, weil sie ohnehin den API-Key-Wechsel aus Phase 0 nach sich zieht und zwei bekannte Bugs gleich mit-erledigt. Phase 2 behebt die verbleibenden, auffälligen Bugs. Phase 3 sichert die für eine Familie besonders schmerzhaften Lücken ab (v. a. Backups). Phase 4 (Tests/CI/Modularisierung) und Phase 5 (Härtung) sind bewusst nach hinten geschoben, weil sie primär für Multi-Tenant-/Team-Szenarien an Bedeutung gewinnen, die im aktuellen Familienkontext nicht vorliegen.
+Phase 0 zuerst, weil hier echte Sicherheitsrisiken vorliegen, die unabhängig von der Nutzerzahl gelten (Zugangsdaten in Git-Historie/Code). Der OpenAI-Key-Widerruf selbst wandert bewusst als letzter Schritt in Phase 1 (statt an den Anfang von Phase 0), damit die Claude-Migration erst steht, bevor der alte Zugang gekappt wird – sonst hätte der Tutor-Chat eine Downtime zwischen Widerruf und fertiger Migration. Phase 2 behebt die verbleibenden, auffälligen Bugs. Phase 3 sichert die für eine Familie besonders schmerzhaften Lücken ab (v. a. Backups). Phase 4 (Tests/CI/Modularisierung) und Phase 5 (Härtung) sind bewusst nach hinten geschoben, weil sie primär für Multi-Tenant-/Team-Szenarien an Bedeutung gewinnen, die im aktuellen Familienkontext nicht vorliegen.
