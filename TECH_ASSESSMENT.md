@@ -17,7 +17,7 @@ Die App wird ausschließlich innerhalb der eigenen Familie genutzt (ein Elternac
 
 Punkte 1–3 sind reine Zugangsdaten-/Hygiene-Themen und gelten unabhängig davon, wer die App nutzt – ein offen liegender API-Key oder ein Klartext-Passwort im Code ist genauso riskant, ob eine Familie oder tausend Nutzer betroffen sind. Keine Abstufung durch den Familienkontext.
 
-1. **`users.db` ist in Git committed** und liegt im Remote (`github.com:tstegk/tutor-app.git`) – bcrypt-Hashes von 5 echten Accounts (u. a. Kinder-Accounts) sind dauerhaft in der Git-Historie, auch wenn die Datei heute noch getrackt wird (`git ls-files`, Commits u. a. `819a412`). Falls das Repo privat ist, sinkt das praktische Risiko (kein öffentlicher Leak), bleibt aber schlechte Praxis, die bei jedem Repo-Zugriff (Collaborator, Backup-Export, künftiges Öffentlich-Machen) zum Problem werden kann.
+1. ✅ Erledigt (2026-09-22): **`users.db` war in Git committed** und lag im Remote (`github.com:tstegk/tutor-app.git`) – bcrypt-Hashes von 5 echten Accounts (u. a. Kinder-Accounts) waren dauerhaft in der Git-Historie (Commits u. a. `819a412`). Historie per `git filter-repo` bereinigt (`users.db` in keinem Commit mehr enthalten) und nach `origin/main` force-gepusht; Datei zusätzlich in `.gitignore` aufgenommen. Alte Historie und die Live-`users.db` wurden vorab lokal gesichert. **Restpunkt:** `chat_history.json` (Datei aus dem allerersten Commit `07f0cde`, siehe B1 „Tote Artefakte") ist weiterhin getrackt und noch nicht aus der Historie entfernt.
 2. **Klartext-OpenAI-API-Key** liegt in `.env` auf der Platte (nicht in Git, aber ungeschützt lesbar).
 3. **Klartext-Passwort im Code**: `reset_password.py:5` (`new_password = "12-33-97-7B-2C-2C"`) für den Eltern-Account – dieses Skript ist zudem weiterhin live auf dem Server, obwohl es per Commit `55bd00c` „aus Git entfernt" wurde (nur der Git-Tracking wurde beendet, die Datei existiert weiter).
 4. **Default-Passwort `"-"`** für alle initial angelegten Accounts (`create_user.py:22-26`, inkl. Kinder-Accounts) – falls nie manuell geändert, sind das De-facto-Blanko-Zugänge zu Kinderkonten. *Bleibt trivial und kostenlos zu fixen – auch im Familienkontext sinnvoll, da die App übers Internet erreichbar ist und automatisierte Login-Scans generisch nach schwachen Passwörtern suchen, nicht gezielt gegen „fremde Nutzer".*
@@ -94,10 +94,10 @@ Punkte 1–3 sind reine Zugangsdaten-/Hygiene-Themen und gelten unabhängig davo
 
 ### Phase 0 — Sofortmaßnahmen (Sicherheit)
 Ziel: Sicherheitsrisiken schließen, die unabhängig von der Nutzerzahl gelten.
-1. `.env`-Dateiberechtigungen auf `600` setzen (schützt den aktuell noch aktiven OpenAI-Key vor anderen lokalen Nutzern/Prozessen). **Der Widerruf des OpenAI-Keys selbst erfolgt bewusst erst in Phase 1, Schritt 14** – nachdem die Claude-Migration steht und verifiziert läuft, damit der Tutor-Chat zwischen Widerruf und fertiger Migration nicht ausfällt.
-2. Alle Passwörter zurücksetzen (insbesondere die `"-"`-Platzhalter und das `reset_password.py`-Klartextpasswort).
+1. ✅ Erledigt (2026-09-22): `.env`-Dateiberechtigungen auf `600` gesetzt (schützt den aktuell aktiven Anthropic-API-Key vor anderen lokalen Nutzern/Prozessen).
+2. ✅ Als erledigt markiert (Nutzerentscheidung, 2026-09-22) – bewusst ohne technische Verifikation durch Claude; Platzhalter-Passwörter (`"-"`) und `reset_password.py`-Passwort gelten laut Nutzer als bereits behandelt.
 3. ✅ Erledigt: `reset_password.py` und `create_user.py` von hartcodierten Klartext-Credentials befreien (fragen Benutzername/Passwort/Rolle jetzt interaktiv ab, Passwort via `getpass`).
-4. `users.db` und `chat_history.json` aus der Git-Historie entfernen (`git filter-repo` o. ä.) und sauber in `.gitignore` halten.
+4. ⚠️ Teilweise erledigt (2026-09-22): `users.db` per `git filter-repo` aus der gesamten Git-Historie entfernt, force-gepusht nach `origin/main`, zusätzlich in `.gitignore` aufgenommen. **Offen:** `chat_history.json` (siehe A1.1) ist weiterhin getrackt und noch nicht aus der Historie entfernt.
 5. Docker/UFW-Portfreigabe für 8501/81 prüfen und ggf. auf `127.0.0.1`-Bindung umstellen.
 
 *(Owner-Scoping zwischen Eltern-Accounts wurde in den Backlog nach Phase 5 verschoben – im Familienkontext mit einem Elternaccount ohne praktische Wirkung.)*

@@ -23,6 +23,9 @@ Sokratischer KI-Tutor – privates Familienprojekt (ein Elternaccount, Kinder-Ac
 - UI-Texte und Kommentare durchgängig Deutsch
 - Solo-/Familienprojekt ohne Team-Review-Prozess – Tests/CI sind bewusst (noch) niedrig priorisiert
 
+## Arbeitsweise mit Claude Code
+- Jede neue Session startet im Plan-Modus – erst planen, dann nach Freigabe umsetzen
+
 ## Vorsicht
 - `users.db`, `.env`, `chat_history_*.json` nie committen
 - `create_user.py` / `reset_password.py` enthalten bzw. erzeugen Zugangsdaten – bleiben absichtlich außerhalb von Git
