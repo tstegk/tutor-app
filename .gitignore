@@ -6,3 +6,4 @@ nginx/data/
 nginx/letsencrypt/
 reset_password.py
 create_user.py
+users.db
